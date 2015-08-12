@@ -17,4 +17,4 @@ There are no installation instructions yet.
 This project has just started and is not even ready for a pre-alpha release. However, feel free to 'watch' this repo to stay up-to-date with my progress.
 
 ## License
-This project is licensed under the GNU General Public License V2. This means it's open source and anyone is allowed to use the code. However, it does require anyone who distributes the code or a derivative work to make the source available under the same terms. Spread your knowledge! ;-)
+This project is licensed under the GNU General Public License V3. This means it's open source and anyone is allowed to use the code. However, it does require anyone who distributes the code or a derivative work to make the source available under the same terms. Spread your knowledge! ;-)

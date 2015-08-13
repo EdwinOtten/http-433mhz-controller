@@ -24,37 +24,37 @@ void loop()
 {
   char clientline[BUFFERSIZE];
   int index = 0;
-  
+
   EthernetClient client = server.available();
   if (client) {
     // an http request ends with a blank line
     boolean current_line_is_blank = true;
-    
+
     // reset the input buffer
     index = 0;
-    
+
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        
+
         // If it isn't a new line, add the character to the buffer
         if (c != '\n' && c != '\r') {
           clientline[index] = c;
           index++;
           // are we too big for the buffer? start tossing out data
-          if (index >= BUFFERSIZE) 
-            index = BUFFERSIZE -1;
-          
+          if (index >= BUFFERSIZE)
+            index = BUFFERSIZE - 1;
+
           // continue to read more data!
           continue;
         }
-        
+
         // got a \n or \r new line, which means the string is done
         clientline[index] = 0;
-        
+
         // Print it out for debugging
         Serial.println(clientline);
-        
+
         if (strstr(clientline, "GET / ") != 0) {
 
           printHttpHeaders(client, "200 OK", "text/html");
@@ -64,18 +64,18 @@ void loop()
 
           // request url contains arguments, extract those
           char *parameters;
-          
+
           // Example request:
-          // GET /?first=John&Last=Doe HTTP/1.1 
+          // GET /?first=John&Last=Doe HTTP/1.1
 
           parameters = clientline + 6; // look after the "GET /?" (6 chars)
           // clear the HTTP/1.1 from the end of line
           (strstr(clientline, " HTTP"))[0] = 0;
-          
+
           // print the parameters
           Serial.println("Parameters: ");
           Serial.print(parameters);
-          
+
           printHttpHeaders(client, "200 OK", "text/html");
           client.println("Hello there! You provided the following paramters:");
           client.println(parameters);
@@ -97,7 +97,7 @@ void loop()
   }
 }
 
-void printHttpHeaders(EthernetClient client, char[] httpCode, char[] contentType) {
+void printHttpHeaders(EthernetClient client, char httpCode[], char contentType[]) {
   client.println("HTTP/1.1 ");
   client.print(httpCode);
   client.println("Content-Type: ");
@@ -126,7 +126,7 @@ void commandReceived(NewRemoteCode receivedCode) {
 
 
 void transmitCode(NewRemoteCode command, unsigned long address) {
-  // Create a new transmitter with the received address, use digital pin 8 as output pin. 
+  // Create a new transmitter with the received address, use digital pin 8 as output pin.
   // With a period duration of 260ms (default), repeating the transmitted code 2^3=8 times.
   NewRemoteTransmitter transmitter(address, 8, 260, 3);
 
@@ -137,7 +137,7 @@ void transmitCode(NewRemoteCode command, unsigned long address) {
     } else {
       transmitter.sendDim(command.unit, command.dimLevel);
     }
-  } 
+  }
   else {
     // On/Off signal received
     bool isOn = command.switchType == NewRemoteCode::on;

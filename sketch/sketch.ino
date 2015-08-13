@@ -3,11 +3,17 @@
 #include <NewRemoteReceiver.h>
 #include <NewRemoteTransmitter.h>
 
-#define BUFFERSIZE 100
+#define EthernetPort        80
+#define BufferSize          100
+#define PinRFreceive        2
+#define PinRFtransmit       8
+#define RFtransmitPeriod    260
+#define RFtransmitRepeats   3
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 byte ip[] = { 192, 168, 192, 80 };
-EthernetServer server(80);
+EthernetServer server(EthernetPort);
+
 
 void setup() {
   Serial.begin(9600);
@@ -17,12 +23,12 @@ void setup() {
   Serial.print("server is at ");
   Serial.println(Ethernet.localIP());
 
-  NewRemoteReceiver::init(0, 2, commandReceived);
+  NewRemoteReceiver::init(0, PinRFreceive, commandReceived);
 }
 
 void loop()
 {
-  char clientline[BUFFERSIZE];
+  char clientline[BufferSize];
   int index = 0;
 
   EthernetClient client = server.available();
@@ -42,8 +48,8 @@ void loop()
           clientline[index] = c;
           index++;
           // are we too big for the buffer? start tossing out data
-          if (index >= BUFFERSIZE)
-            index = BUFFERSIZE - 1;
+          if (index >= BufferSize)
+            index = BufferSize - 1;
 
           // continue to read more data!
           continue;
@@ -126,9 +132,7 @@ void commandReceived(NewRemoteCode receivedCode) {
 
 
 void transmitCode(NewRemoteCode command, unsigned long address) {
-  // Create a new transmitter with the received address, use digital pin 8 as output pin.
-  // With a period duration of 260ms (default), repeating the transmitted code 2^3=8 times.
-  NewRemoteTransmitter transmitter(address, 8, 260, 3);
+  NewRemoteTransmitter transmitter(address, PinRFtransmit, RFtransmitPeriod, RFtransmitRepeats);
 
   if (command.switchType == NewRemoteCode::dim || (command.switchType == NewRemoteCode::on && command.dimLevelPresent)) {
     // Dimmer signal received

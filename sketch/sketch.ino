@@ -9,17 +9,21 @@
 #define PinRFtransmit       8
 #define RFtransmitPeriod    260
 #define RFtransmitRepeats   3
+#define MAX_ARG_LENGTH      3
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-byte ip[] = { 192, 168, 192, 80 };
+byte ip[] = { 192, 168, 1, 219 };
+byte gateway[] = { 192, 168, 1, 1 };
+byte subnet[] = { 255, 255, 255, 0 };
 EthernetServer server(EthernetPort);
 
-
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
-  Ethernet.begin(mac, ip);
+  Ethernet.begin(mac, ip, gateway, subnet);
+  delay(500);
   server.begin();
+  Serial.println();
   Serial.print("server is at ");
   Serial.println(Ethernet.localIP());
 
@@ -28,11 +32,17 @@ void setup() {
 
 void loop()
 {
-  char clientline[BufferSize];
-  int index = 0;
-
   EthernetClient client = server.available();
   if (client) {
+    processRequest(client);
+  }
+}
+
+void processRequest(EthernetClient client) 
+{
+    char clientline[BufferSize];
+    int index = 0;
+    
     // an http request ends with a blank line
     boolean current_line_is_blank = true;
 
@@ -59,38 +69,47 @@ void loop()
         clientline[index] = 0;
 
         // Print it out for debugging
+        Serial.println();
         Serial.println(clientline);
 
         if (strstr(clientline, "GET / ") != 0) {
 
-          printHttpHeaders(client, "200 OK", "text/html");
-          client.println("Hello there! you didn't provide any parameters!");
+          printHttpResponse(client, "400 Bad Request", "text/html", "The Force is strong in you, but not ready you are! Forgot to provide parameters you did.");
 
-        } else if (strstr(clientline, "GET /?") != 0) {
+        } else if (strstr(clientline, "GET /?args=") != 0) {
 
           // request url contains arguments, extract those
           char *parameters;
 
           // Example request:
-          // GET /?first=John&Last=Doe HTTP/1.1
+          // GET /?args=1,99,2,1 HTTP/1.1
 
-          parameters = clientline + 6; // look after the "GET /?" (6 chars)
+          parameters = clientline + 11; // look after the "GET /?args=" (11 chars)
           // clear the HTTP/1.1 from the end of line
           (strstr(clientline, " HTTP"))[0] = 0;
-
-          // print the parameters
-          Serial.println("Parameters: ");
-          Serial.print(parameters);
-
-          printHttpHeaders(client, "200 OK", "text/html");
-          client.println("Hello there! You provided the following paramters:");
-          client.println(parameters);
+          
+          char *type = subStr(parameters, ",", 1);
+          char *address = subStr(parameters, ",", 2);
+          char *channel = subStr(parameters, ",", 3);
+          char *value = subStr(parameters, ",", 4);
+          
+          String data = "Hello there! You provided the following parameters:";
+          data += "\rtype: ";
+          data += type;
+          data += "\raddress: ";
+          data += address;
+          data += "\rchannel: ";
+          data += channel;
+          data += "\rvalue: ";
+          data += value;
+          printHttpResponse(client, "200 OK", "text/html", data);
+          
+          transmit(String(type).toInt(), String(address).toInt(), String(channel).toInt(), String(value).toInt());
 
         } else {
 
           // everything else is a 404
-          printHttpHeaders(client, "404 Not Found", "text/html");
-          client.println("<h2>File Not Found!</h2>");
+          printHttpResponse(client, "404 Not Found", "text/html", "<h2>File Not Found!</h2>");
 
         }
         break;
@@ -99,16 +118,43 @@ void loop()
 
     // give the web browser time to receive the data
     delay(1);
-    client.stop();
-  }
+    client.stop(); 
 }
 
-void printHttpHeaders(EthernetClient client, char httpCode[], char contentType[]) {
-  client.println("HTTP/1.1 ");
-  client.print(httpCode);
-  client.println("Content-Type: ");
-  client.print(contentType);
-  client.println("Connection: close");  // the connection will be closed after completion of the response
+void transmit(int type, int address, int channel, int value) 
+{
+  
+}
+
+char* subStr (char* input_string, char *separator, int segment_number) 
+{
+  char *act, *sub, *ptr;
+  static char copy[MAX_ARG_LENGTH];
+  int i;
+
+  strcpy(copy, input_string);
+
+  for (i = 1, act = copy; i <= segment_number; i++, act = NULL) 
+  {
+	sub = strtok_r(act, separator, &ptr);
+	if (sub == NULL) break;
+  }
+  return sub;  
+}
+
+void printHttpResponse(EthernetClient client, char httpCode[], char contentType[], String data) 
+{
+  client.print("HTTP/1.1 ");
+  client.println(httpCode);
+  client.print("Content-Type: ");
+  client.println(contentType);  
+  client.println("Connection: close");
+  client.print("Content-Length: ");
+  client.println(data.length());
+  client.println();
+  client.print(data);
+  client.println();
+
   client.println();
 }
 
@@ -125,7 +171,11 @@ void commandReceived(NewRemoteCode receivedCode) {
   // Wait 5 seconds before sending.
   delay(5000);
 
-  transmitCode(receivedCode, receivedCode.address);
+  Serial.println();
+  Serial.println("### Received NewRemoteCode ###");
+  Serial.print("address: ");
+  Serial.println(receivedCode.address);
+//  transmitCode(receivedCode, receivedCode.address);
 
   NewRemoteReceiver::enable();
 }
